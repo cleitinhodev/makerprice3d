@@ -1,0 +1,43 @@
+name: Studio Windows preview
+on:
+  push:
+    branches: [experiment/qt-studio]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-build.txt
+      - name: Install Qt and build tools
+        run: python -m pip install -r requirements-build.txt
+      - name: Test calculations, storage and UI
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m unittest discover -s tests -v
+      - name: Build portable Windows application
+        run: python -m PyInstaller --noconfirm --clean --windowed --onedir --name MakerPrice3D-Studio --icon assets/favicon.ico --add-data "LICENSE.txt;." main_qt.py
+      - name: Check packaged executable
+        shell: pwsh
+        run: |
+          $process = Start-Process -FilePath "dist/MakerPrice3D-Studio/MakerPrice3D-Studio.exe" -ArgumentList "--smoke-test" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Packaged executable failed with exit code $($process.ExitCode)" }
+      - name: Include documentation and license
+        shell: pwsh
+        run: |
+          Copy-Item STUDIO.md dist/MakerPrice3D-Studio/LEIA-ME.md
+          Copy-Item LICENSE.txt dist/MakerPrice3D-Studio/LICENSE.txt
+          Get-FileHash dist/MakerPrice3D-Studio/MakerPrice3D-Studio.exe -Algorithm SHA256 | Format-List | Out-File dist/MakerPrice3D-Studio/SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MakerPrice3D-Studio-Windows-x64
+          path: dist/MakerPrice3D-Studio/
+          retention-days: 30
+          if-no-files-found: error
