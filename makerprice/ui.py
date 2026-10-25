@@ -360,7 +360,8 @@ class MainWindow(QMainWindow):
 
     def make_summary(self, layout):
         frame, box = card('Resumo do orçamento')
-        frame.setFixedWidth(305)
+        frame.setMinimumWidth(280)
+        frame.setMinimumHeight(720)
         box.addWidget(label('PREÇO DO PEDIDO', 'eyebrow'))
         self.price_label = label('', 'price')
         box.addWidget(self.price_label)
@@ -388,7 +389,12 @@ class MainWindow(QMainWindow):
         box.addStretch()
         box.addWidget(button('Exportar proposta PDF', self.export_pdf, True))
         box.addWidget(label('Valores estimados · revise antes de vender.\nConsumos e tempos referem-se ao lote.', 'muted', True))
-        layout.addWidget(frame)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setFixedWidth(315)
+        scroll.setWidget(frame)
+        layout.addWidget(scroll)
 
     def current(self):
         data = {}

@@ -67,8 +67,9 @@ class Quote:
                 raise ValueError('Texto de orçamento inválido.')
         for name in NUMERIC:
             value = number(getattr(self, name))
-            if value < 0 or value > D('1000000000'):
-                raise ValueError('Valores devem estar entre zero e um bilhão.')
+            limit = D('100') if name == 'density' else D('1000') if name in ('supports', 'waste', 'contingency', 'target') else D('1000000000')
+            if value < 0 or value > limit:
+                raise ValueError(f'Valor fora do intervalo permitido em {name}: 0 a {limit}.')
         if self.amount_unit == 'ml' and number(self.density) <= 0:
             raise ValueError('Densidade precisa ser maior que zero para converter ml.')
         if number(self.fee) >= 100:

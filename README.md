@@ -1,5 +1,8 @@
 # Maker Price 3D
 
+> **Preview Qt Studio:** esta branch inclui uma nova interface em PySide6, perfis, biblioteca e orçamento por lote. Veja [como baixar o executável Windows e usar a preview](STUDIO.md). A edição clássica continua em `main.py`; a nova edição inicia em `main_qt.py`.
+
+
 ## Download e Tutorial (PT/EN):
 
 [Maker Price 3D (Windows 10/11)](https://www.bugzinho.com/makerprice3d)
