@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 from .domain import Quote, calculate, money, NUMERIC
 from .storage import Library, read_document, write_document
 
-COLORS = ['#54dfbd', '#66a9ff', '#bd9cff', '#ffc578', '#f68fa9', '#72cdd5', '#a7b7cb', '#dae982']
+COLORS = ['#ff4c4c', '#4cff4c', '#7c7cff', '#ffd24c', '#4cff9d', '#b187ff', '#f26522', '#dae982']
 STYLE = '''
 QWidget { color: #dfe8f4; font-family: "Segoe UI", "DejaVu Sans"; font-size: 13px; }
 QMainWindow, QWidget#root { background: #10151e; }
@@ -106,80 +106,7 @@ class CostBar(QWidget):
             left = right
 
 
-class MainWindow(QMainWindow):
-    def __init__(self, data_dir=None):
-        super().__init__()
-        location = data_dir or QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)
-        self.library = Library(Path(location) / 'studio.sqlite3')
-        self.fields = {}
-        self.loading = True
-        self.dirty = False
-        self.identity = None
-        self.result = None
-        screen = QApplication.primaryScreen().availableGeometry()
-        self.resize(min(1400, max(1080, screen.width() - 60)), min(900, max(680, screen.height() - 70)))
-        self.setMinimumSize(1080, 680)
-        self.setStyleSheet(STYLE)
-        self.root = QWidget()
-        self.root.setObjectName('root')
-        self.setCentralWidget(self.root)
-        layout = QHBoxLayout(self.root)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        sidebar = QFrame()
-        sidebar.setObjectName('sidebar')
-        sidebar.setFixedWidth(205)
-        nav = QVBoxLayout(sidebar)
-        nav.setContentsMargins(18, 30, 18, 20)
-        nav.setSpacing(8)
-        nav.addWidget(label('◈  MAKER PRICE', 'heading'))
-        nav.addWidget(label('3D STUDIO  /  PREVIEW', 'eyebrow'))
-        nav.addSpacing(32)
-        self.nav_buttons = []
-        for index, text in enumerate(['01   Orçamento', '02   Produção', '03   Preço e lucro', '04   Biblioteca']):
-            b = button(text, lambda checked=False, i=index: self.go(i))
-            b.setObjectName('nav')
-            b.setCheckable(True)
-            nav.addWidget(b)
-            self.nav_buttons.append(b)
-        nav.addStretch()
-        nav.addWidget(label('FEITO PARA MAKERS', 'eyebrow'))
-        nav.addWidget(label('Custos claros.\nDecisões melhores.', 'muted'))
-        nav.addSpacing(12)
-        nav.addWidget(label('CleitinhoDEV · v2 experimental', 'muted', True))
-        layout.addWidget(sidebar)
-        body = QVBoxLayout()
-        body.setContentsMargins(28, 24, 28, 18)
-        body.setSpacing(20)
-        layout.addLayout(body, 1)
-        top = QHBoxLayout()
-        titles = QVBoxLayout()
-        titles.addWidget(label('SEU ATELIÊ, EM NÚMEROS', 'eyebrow'))
-        self.page_title = label('Um bom projeto começa aqui.', 'title', True)
-        titles.addWidget(self.page_title)
-        top.addLayout(titles, 1)
-        top.addWidget(button('Novo', self.new))
-        top.addWidget(button('Abrir JSON', self.open_file))
-        top.addWidget(button('Salvar', self.save, True))
-        body.addLayout(top)
-        content = QHBoxLayout()
-        content.setSpacing(20)
-        self.stack = QStackedWidget()
-        content.addWidget(self.stack, 1)
-        self.make_quote_page()
-        self.make_production_page()
-        self.make_price_page()
-        self.make_library_page()
-        self.make_summary(content)
-        body.addLayout(content, 1)
-        for shortcut, fn in [('Ctrl+S', self.save), ('Ctrl+N', self.new), ('Ctrl+O', self.open_file), ('Ctrl+Shift+S', self.export_json)]:
-            action = QAction(self)
-            action.setShortcut(QKeySequence(shortcut))
-            action.triggered.connect(fn)
-            self.addAction(action)
-        self.statusBar().showMessage('Offline · Dados salvos neste computador · Valores iniciais são exemplos editáveis')
-        self.load_quote(Quote())
-        self.go(0)
+class StudioActions(QMainWindow):
 
     def page(self):
         page = QWidget()
@@ -233,99 +160,8 @@ class MainWindow(QMainWindow):
         grid.setColumnStretch(1, 1)
         box.addLayout(grid)
 
-    def make_quote_page(self):
-        page = self.page()
-        frame, box = card('01 / Identidade do projeto', 'Organize o lote, o cliente e os detalhes da sua próxima criação.')
-        self.form(box, [('Nome do projeto', self.text_field('title', 'Ex.: Miniaturas — coleção romana')),
-                        ('Cliente', self.text_field('client', 'Nome ou referência do cliente'))])
-        row = QHBoxLayout()
-        self.units = QSpinBox()
-        self.units.setRange(1, 100000)
-        self.units.valueChanged.connect(self.changed)
-        self.fields['units'] = self.units
-        row.addWidget(label('Peças no lote', 'muted'))
-        row.addWidget(self.units)
-        row.addWidget(label('Tecnologia', 'muted'))
-        row.addWidget(self.combo('process', ['Resina', 'FDM']))
-        box.addLayout(row)
-        page.addWidget(frame)
-        frame, box = card('02 / Material', 'Informe o consumo de TODO o lote. Se o fatiador já inclui suportes, deixe o adicional em 0%.')
-        self.material_profiles = QComboBox()
-        self.material_profiles.currentIndexChanged.connect(lambda: self.apply_profile('material'))
-        box.addWidget(self.material_profiles)
-        self.form(box, [('Preço do material / kg (R$)', self.numeric('material_price')),
-                        ('Consumo do lote', self.numeric('amount', decimals=3)),
-                        ('Unidade do consumo', self.combo('amount_unit', ['g', 'ml'])),
-                        ('Densidade (g/ml)', self.numeric('density', decimals=3, maximum=100)),
-                        ('Suportes adicionais', self.numeric('supports', ' %', 1000)),
-                        ('Perda de material', self.numeric('waste', ' %', 1000))])
-        box.addWidget(button('Salvar perfil de material', lambda: self.save_profile('material')))
-        page.addWidget(frame)
-        frame, box = card('Notas do orçamento')
-        notes = QTextEdit()
-        notes.setPlaceholderText('Acabamento, cor, prazo, condições e observações…')
-        notes.setMaximumHeight(110)
-        notes.textChanged.connect(self.changed)
-        self.fields['notes'] = notes
-        box.addWidget(notes)
-        page.addWidget(frame)
-        page.addStretch()
-        self.refresh_profiles('material')
 
-    def make_production_page(self):
-        page = self.page()
-        frame, box = card('03 / Máquina e energia', 'Tempo total de máquina para produzir o lote. Os perfis são preenchidos por você.')
-        self.printer_profiles = QComboBox()
-        self.printer_profiles.currentIndexChanged.connect(lambda: self.apply_profile('printer'))
-        box.addWidget(self.printer_profiles)
-        self.form(box, [('Tempo de impressão', self.numeric('hours', ' h', decimals=3)),
-                        ('Potência média', self.numeric('watts', ' W')),
-                        ('Tarifa por kWh (R$)', self.numeric('tariff', decimals=4)),
-                        ('Desgaste por hora (R$)', self.numeric('wear_hour', decimals=3))])
-        box.addWidget(label('Desgaste/h: rateie manutenção, LCD/FEP ou componentes FDM pela vida útil estimada.', 'muted', True))
-        box.addWidget(button('Salvar perfil de impressora', lambda: self.save_profile('printer')))
-        page.addWidget(frame)
-        frame, box = card('04 / Trabalho e acabamento', 'Horas de trabalho ativo; o tempo de máquina é calculado separadamente.')
-        self.form(box, [('Trabalho ativo no lote', self.numeric('labor_hours', ' h', decimals=3)),
-                        ('Valor da sua hora (R$)', self.numeric('labor_rate')),
-                        ('Acabamento do lote (R$)', self.numeric('finishing')),
-                        ('Outros custos do lote (R$)', self.numeric('extra'))])
-        box.addWidget(label('Em acabamento, inclua lavagem, cura, lixas, primer, pintura e consumíveis.', 'muted', True))
-        page.addWidget(frame)
-        frame, box = card('05 / Entrega e imprevistos')
-        self.form(box, [('Embalagem por peça (R$)', self.numeric('packaging_unit')),
-                        ('Frete do pedido (R$)', self.numeric('shipping')),
-                        ('Reserva sobre custos', self.numeric('contingency', ' %', 1000))])
-        box.addWidget(label('A reserva é um adicional de segurança configurável, não uma probabilidade calculada de falha.', 'muted', True))
-        page.addWidget(frame)
-        page.addStretch()
-        self.refresh_profiles('printer')
 
-    def make_price_page(self):
-        page = self.page()
-        frame, box = card('06 / Sua estratégia de preço', 'Escolha a meta. O desconto é aplicado depois do preço sugerido e reduz a margem final.')
-        self.form(box, [('Método de precificação', self.combo('pricing', ['Margem sobre venda', 'Acréscimo sobre custo'])),
-                        ('Meta desejada', self.numeric('target', ' %', 1000)),
-                        ('Taxas sobre a venda', self.numeric('fee', ' %', 99.99)),
-                        ('Desconto no pedido (R$)', self.numeric('discount'))])
-        box.addWidget(label('Margem: parcela do preço de venda que sobra após custos e taxas.\nAcréscimo: percentual aplicado sobre o custo, com taxas compensadas no preço.', 'muted', True))
-        page.addWidget(frame)
-        frame, box = card('Simule antes de fechar', 'Comparação de preços com três metas. Mantém custos, taxas e desconto do orçamento atual.')
-        self.scenarios = QTableWidget(3, 3)
-        self.scenarios.setHorizontalHeaderLabels(['Meta', 'Pedido', 'Resultado'])
-        self.configure_table(self.scenarios)
-        self.scenarios.setFixedHeight(168)
-        box.addWidget(self.scenarios)
-        page.addWidget(frame)
-        frame, box = card('Compartilhe o orçamento')
-        box.addWidget(label('PDF apresenta a proposta ao cliente. CSV detalha os custos para seu controle. JSON permite reabrir no Studio.', 'muted', True))
-        row = QHBoxLayout()
-        row.addWidget(button('Proposta PDF', self.export_pdf, True))
-        row.addWidget(button('Custos CSV', self.export_csv))
-        row.addWidget(button('Exportar JSON', self.export_json))
-        box.addLayout(row)
-        page.addWidget(frame)
-        page.addStretch()
 
     @staticmethod
     def configure_table(table):
@@ -358,43 +194,6 @@ class MainWindow(QMainWindow):
         page.addWidget(frame)
         page.addStretch()
 
-    def make_summary(self, layout):
-        frame, box = card('Resumo do orçamento')
-        frame.setMinimumWidth(280)
-        frame.setMinimumHeight(720)
-        box.addWidget(label('PREÇO DO PEDIDO', 'eyebrow'))
-        self.price_label = label('', 'price')
-        box.addWidget(self.price_label)
-        self.unit_label = label('', 'muted', True)
-        box.addWidget(self.unit_label)
-        self.bar = CostBar()
-        box.addSpacing(10)
-        box.addWidget(self.bar)
-        self.breakdown = QFormLayout()
-        self.breakdown.setSpacing(9)
-        self.breakdown_labels = {}
-        for index, name in enumerate(calculate(Quote()).categories):
-            title = label('● ' + name)
-            title.setStyleSheet(f'color: {COLORS[index]}; font-size: 11px;')
-            value = label('')
-            value.setAlignment(Qt.AlignRight)
-            self.breakdown.addRow(title, value)
-            self.breakdown_labels[name] = value
-        box.addLayout(self.breakdown)
-        self.metrics = label('', wrap=True)
-        box.addSpacing(8)
-        box.addWidget(self.metrics)
-        self.error = label('', 'error', True)
-        box.addWidget(self.error)
-        box.addStretch()
-        box.addWidget(button('Exportar proposta PDF', self.export_pdf, True))
-        box.addWidget(label('Valores estimados · revise antes de vender.\nConsumos e tempos referem-se ao lote.', 'muted', True))
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scroll.setFixedWidth(315)
-        scroll.setWidget(frame)
-        layout.addWidget(scroll)
 
     def current(self):
         data = {}
@@ -480,13 +279,6 @@ class MainWindow(QMainWindow):
         self.update_title()
         self.recalculate()
 
-    def go(self, index):
-        self.stack.setCurrentIndex(index)
-        for i, b in enumerate(self.nav_buttons):
-            b.setChecked(i == index)
-        self.page_title.setText(['Um bom projeto começa aqui.', 'Do material ao acabamento.', 'Valorize o seu trabalho.', 'Sua próxima ideia já tem história.'][index])
-        if index == 3:
-            self.refresh_history()
 
     def failure(self, error):
         QMessageBox.warning(self, 'Não foi possível concluir', str(error))

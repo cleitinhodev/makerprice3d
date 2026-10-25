@@ -10,7 +10,7 @@ Esta é uma versão experimental, sem assinatura digital. A compilação é feit
 
 ## Novidades
 
-- Interface redimensionável, tema escuro, navegação por etapas e resumo permanente.
+- Painel clássico em três colunas com Material/Energia/Desgaste, Acabamento/Despesas e Logística/Mão de obra/Total. Cores próprias nos blocos, subtotais e gráfico; biblioteca e exportações em janelas auxiliares.
 - Resina e FDM com perfis locais de materiais e impressoras.
 - Consumo em g ou ml com densidade; suportes adicionais e perdas configuráveis.
 - Custo de todo o lote, embalagem por peça e rateio por unidade.

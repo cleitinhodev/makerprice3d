@@ -10,7 +10,7 @@ def main():
     if smoke:
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
     from PySide6.QtWidgets import QApplication
-    from makerprice.ui import MainWindow
+    from makerprice.dashboard import MainWindow
     app = QApplication(sys.argv)
     app.setOrganizationName('CleitinhoDEV')
     app.setApplicationName('MakerPrice3D-Studio')
