@@ -244,7 +244,7 @@ class MainWindow(StudioActions):
 
     def build_total(self, parent):
         box = self.panel(parent, 'Total')
-        self.panels['Total'].setMinimumHeight(330)
+        self.panels['Total'].setMinimumHeight(310)
         row = QHBoxLayout()
         row.addWidget(self.combo('pricing', ['Margem sobre venda', 'Acréscimo sobre custo']), 1)
         target = self.numeric('target', ' %', 1000)
