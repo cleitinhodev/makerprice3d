@@ -73,3 +73,10 @@ def test_salvar_e_abrir(janela, tmp_path):
     j.abrir(destino)
     assert j.calculadora.projeto["material"]["peso"] == "33"
     assert str(destino) in j.contexto.banco.recentes()[0]
+
+
+def test_teste_rapido_sai_com_zero(tmp_path, monkeypatch):
+    monkeypatch.setenv("MP3D_DATA_DIR", str(tmp_path))
+    from makerprice3d.ui.app import main
+
+    assert main(["MakerPrice3D", "--smoke-test"]) == 0

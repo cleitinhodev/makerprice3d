@@ -97,6 +97,18 @@ pytest --cov=makerprice3d.core --cov-fail-under=80
 
 Em servidores sem tela, use `QT_QPA_PLATFORM=offscreen`. O GitHub Actions roda ruff e pytest em cada push.
 
+### Gerar o executável do Windows
+
+```bash
+pip install -r requirements-build.txt
+python empacotamento/gerar_executavel.py
+```
+
+O resultado é `dist/MakerPrice3D.exe` (arquivo único) e `dist/MakerPrice3D-v2.0.0-windows.zip`. O workflow
+"Executável Windows" do GitHub Actions faz o mesmo em cada push e disponibiliza o zip como artefato.
+O executável não tem assinatura digital, então o Windows SmartScreen pode mostrar um aviso na primeira execução
+("Mais informações" → "Executar assim mesmo").
+
 ### Estrutura
 
 - `makerprice3d/core` — cálculos puros (sem interface), dinheiro em `Decimal`.

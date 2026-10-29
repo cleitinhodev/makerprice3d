@@ -1,0 +1,55 @@
+# Maker Price 3D
+# Copyright (C) 2026 CleitinhoDEV
+# Licensed under the GNU GPL v3 or later
+# Gera o executável do Windows (MakerPrice3D.exe) e publica como artefato do workflow.
+name: Executável Windows
+
+on:
+  push:
+    branches: [v2-pyside6]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt -r requirements-build.txt
+          pip install -e .
+
+      - name: Testes
+        run: pytest -q
+
+      - name: Gerar executável
+        run: python empacotamento/gerar_executavel.py
+
+      - name: Teste rápido do executável
+        shell: pwsh
+        run: |
+          $env:MP3D_DATA_DIR = Join-Path $env:RUNNER_TEMP "mp3d-dados"
+          $p = Start-Process -FilePath "dist\MakerPrice3D.exe" -ArgumentList "--smoke-test" -PassThru
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw "O executável não terminou em 120 s" }
+          Write-Host "Código de saída: $($p.ExitCode)"
+          if ($p.ExitCode -ne 0) { throw "Teste rápido falhou ($($p.ExitCode))" }
+          Get-ChildItem $env:MP3D_DATA_DIR | Format-Table Name, Length
+          Get-Item dist\*.exe, dist\*.zip | Format-Table Name, Length
+
+      - name: Enviar artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: MakerPrice3D-v2.0.0-windows
+          path: dist/MakerPrice3D-v2.0.0-windows.zip
+          if-no-files-found: error
+          retention-days: 30
