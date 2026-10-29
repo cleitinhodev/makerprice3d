@@ -20,6 +20,50 @@ A tecnologia utilizada foi desenvolvida em Python, com o apoio de bibliotecas ex
 
 O software foi criado com cuidado e dedicação, prezando pela segurança e pela utilidade. A ideia é que ele seja uma ferramenta confiável no dia a dia, ajudando cada usuário a tirar o melhor proveito do seu trabalho.
 
+## Novidades da versão 2.0
+
+A v2.0 é uma repaginada completa, **100% focada em resina**. Nenhum campo da v1.x foi removido e as
+fórmulas originais continuam as mesmas (há testes que comparam cada cálculo com o código da v1.x).
+
+**Visual e uso**
+
+- Interface nova em PySide6 (Qt): tema escuro/claro (Ctrl+T), cards, janela redimensionável e responsiva.
+- Validação em tempo real: campo inválido fica vermelho e mostra o motivo.
+- Atalhos: Ctrl+N (novo), Ctrl+O (abrir), Ctrl+S (salvar), Ctrl+Shift+S (salvar como), Ctrl+1…9 (páginas).
+- Gráfico de composição animado, calculadora de kWh e cotação em outras moedas mantidos.
+
+**Projetos**
+
+- Novo formato `.mp3d` (JSON com `schema_version`); projetos `.json` da v1.x abrem e são convertidos.
+- Salvamento atômico com cópia `.bak`, aviso de alterações não salvas, projetos recentes,
+  salvamento automático e recuperação após fechamento inesperado.
+
+**Cálculos novos (todos opcionais — vazios valem zero)**
+
+- Mesa compartilhada: rateio por peso ou por quantidade de peças e tempo total pela altura da peça mais alta.
+- Perdas de resina (tanque, lavagem, suportes extras) e taxa de falha (manual ou medida pelo histórico).
+- Custos fixos rateados por hora de máquina e depreciação da impressora/mesa.
+- Licença comercial de STL, EPI/consumíveis (luvas, máscara, filtro, papel) e climatização do ambiente.
+- Tributos: DAS do MEI rateado pelas vendas do mês ou percentual (ex.: Simples) — **nenhuma alíquota
+  oficial vem fixa no programa**, você informa a sua.
+- Taxas do canal de venda (percentual + fixa). Os canais iniciais são **exemplos editáveis** — confira
+  sempre a tarifa atual.
+- Margem × markup, preços mínimo/sugerido/premium, preço reverso (quanto sobra de um preço já definido).
+- Sem o antigo limite de R$ 9.999,99.
+
+**Gestão do negócio**
+
+- Perfis de impressoras, biblioteca de resinas e canais de venda (SQLite na pasta de dados do usuário).
+- Clientes, orçamentos com validade/prazo/pagamento, PDF, link do WhatsApp (wa.me) e conversão em pedido.
+- Catálogo de produtos com foto, escala e preço; kits/combos com desconto.
+- Fila de produção (aguardando → imprimindo → lavando → curando → acabamento → pronto → entregue).
+- Estoque com baixa automática quando o pedido entra em "imprimindo" e alerta de estoque baixo.
+- Equipamentos: contador de LCD (horas) e FEP (impressões), histórico de manutenção, alerta de troca e
+  registro de falhas que alimenta a taxa de falha medida.
+- Painel mensal (faturamento, lucro, ticket médio, peças mais vendidas, resina usada), ponto de equilíbrio,
+  retorno do investimento (payback) e simulação de cenários (ex.: resina +20%).
+- Exportação em CSV e PDF, backup automático diário e exportação completa (.zip).
+
 ## Funcionalidades
 
 - Cálculo completo de custos de impressão 3D
@@ -27,6 +71,53 @@ O software foi criado com cuidado e dedicação, prezando pela segurança e pela
 - Sistema de salvamento e carregamento de dados
 - Interface prática e intuitiva
 - Suporte para precificação mais precisa
+- Precificação de várias peças com quantidade, orçamentos e pedidos (v2.0)
+
+## Como executar a partir do código
+
+Requer Python 3.10 ou superior.
+
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate   |   Linux/macOS: source .venv/bin/activate
+pip install -r requirements.txt
+python main.py          # ou: python -m makerprice3d
+```
+
+Para abrir um projeto direto: `python main.py caminho/do/projeto.mp3d`.
+
+### Testes e qualidade
+
+```bash
+pip install -r requirements-dev.txt
+pip install -e .
+ruff check .
+pytest --cov=makerprice3d.core --cov-fail-under=80
+```
+
+Em servidores sem tela, use `QT_QPA_PLATFORM=offscreen`. O GitHub Actions roda ruff e pytest em cada push.
+
+### Estrutura
+
+- `makerprice3d/core` — cálculos puros (sem interface), dinheiro em `Decimal`.
+- `makerprice3d/services` — arquivos, banco SQLite, backup, cotação e exportação.
+- `makerprice3d/ui` — interface PySide6.
+- `tests` — testes automatizados, incluindo a paridade com as fórmulas da v1.x (`tests/legado_v1.py`).
+
+### Onde ficam os dados
+
+- Windows: `%APPDATA%\MakerPrice3D` · macOS: `~/Library/Application Support/MakerPrice3D` ·
+  Linux: `~/.local/share/MakerPrice3D`.
+- Lá ficam o banco (`makerprice3d.db`), os backups, as fotos do catálogo e os salvamentos automáticos.
+  A variável `MP3D_DATA_DIR` muda esse local.
+
+### Diferenças de comportamento em relação à v1.x
+
+- Campos que a v1.x lia como número inteiro (vida útil, tempo total, durabilidade e os do acabamento)
+  agora aceitam decimais: "2,5" h deixava de ser 0 (ou 1) e passa a valer 2,5.
+- "Área (%)" aceita vírgula ("12,5"); antes isso virava 100%.
+- O limite de R$ 9.999,99 foi removido.
+- Projetos novos começam com o lucro padrão das Configurações (30%, editável); na v1.x começavam em 0%.
 
 ## Requisitos
 
@@ -44,11 +135,43 @@ Agradeço pela atenção e espero que faça bom uso do meu software! :)
 
 Por: CleitinhoDEV
 
-## Créditos e Agradecimentos 
+## Créditos e Agradecimentos
 
 O Maker Price 3D faz uso de diversas bibliotecas de código aberto, e gostaríamos de expressar nossa gratidão pelos desenvolvedores dessas ferramentas poderosas. Abaixo, estão as bibliotecas utilizadas no projeto, seus respectivos créditos e os links para as licenças correspondentes:
 
-### CustomTkinter
+### PySide6 (Qt for Python) — v2.0
+
+Descrição: Biblioteca da interface gráfica da versão 2.0 (janelas, temas, gráficos e geração de PDF).
+
+Licença: GNU LGPL v3
+
+Link para a Licença: https://www.gnu.org/licenses/lgpl-3.0.html
+
+Créditos: https://www.qt.io/qt-for-python
+
+### sqlite3 — v2.0
+
+Descrição: Módulo padrão do Python usado para guardar perfis, resinas, clientes, pedidos, estoque e configurações.
+
+Licença: Python Software Foundation License (SQLite é de domínio público)
+
+Créditos: https://docs.python.org/3/library/sqlite3.html
+
+### requests
+
+Descrição: Biblioteca utilizada para realizar requisições HTTP, permitindo a comunicação com serviços externos e APIs (cotação de moedas).
+
+Licença: Apache 2.0
+
+Link para a Licença: https://www.apache.org/licenses/LICENSE-2.0
+
+Créditos: https://github.com/psf/requests
+
+### Bibliotecas usadas na v1.x
+
+As bibliotecas abaixo foram usadas na interface da versão 1.x e continuam creditadas aqui.
+
+#### CustomTkinter (v1.x)
 
 Descrição: Biblioteca utilizada para criar interfaces gráficas modernas e personalizadas, contribuindo diretamente para a aparência e experiência visual do software.
 
@@ -58,17 +181,7 @@ Link para a Licença: https://opensource.org/licenses/MIT
 
 Créditos: https://github.com/TomSchimansky/CustomTkinter
 
-### requests
-
-Descrição: Biblioteca utilizada para realizar requisições HTTP, permitindo a comunicação com serviços externos e APIs.
-
-Licença: Apache 2.0
-
-Link para a Licença: https://www.apache.org/licenses/LICENSE-2.0
-
-Créditos: https://github.com/psf/requests
-
-### webbrowser
+#### webbrowser (v1.x)
 
 Descrição: Módulo padrão do Python que permite abrir links diretamente no navegador do usuário, facilitando o acesso a conteúdos externos.
 
@@ -76,7 +189,7 @@ Licença: Python Software Foundation License
 
 Créditos: https://docs.python.org/3/library/webbrowser.html
 
-### os
+#### os (v1.x)
 
 Descrição: Biblioteca padrão do Python utilizada para interagir com o sistema operacional, como manipulação de arquivos e diretórios.
 
@@ -84,7 +197,7 @@ Licença: Python Software Foundation License
 
 Créditos: https://docs.python.org/3/library/os.html
 
-### Pillow (PIL)
+#### Pillow (PIL) (v1.x)
 
 Descrição: Biblioteca utilizada para manipulação e processamento de imagens dentro do software.
 
@@ -94,7 +207,7 @@ Link para a Licença: https://opensource.org/licenses/PIL
 
 Créditos: https://github.com/python-pillow/Pillow
 
-### json
+#### json (v1.x)
 
 Descrição: Biblioteca padrão do Python utilizada para leitura e escrita de dados no formato JSON, permitindo o armazenamento e carregamento de informações.
 
@@ -102,7 +215,7 @@ Licença: Python Software Foundation License
 
 Créditos: https://docs.python.org/3/library/json.html
 
-### tkinter
+#### tkinter (v1.x)
 
 Descrição: Biblioteca padrão do Python para criação de interfaces gráficas, utilizada como base para alguns componentes do sistema.
 
@@ -110,7 +223,7 @@ Licença: Python Software Foundation License
 
 Créditos: https://docs.python.org/3/library/tkinter.html
 
-### matplotlib
+#### matplotlib (v1.x)
 
 Descrição: Biblioteca utilizada para criação de gráficos e visualização de dados, auxiliando na análise de informações dentro do software.
 
@@ -120,5 +233,6 @@ Link para a Licença: https://matplotlib.org/stable/users/project/license.html
 
 Créditos: https://matplotlib.org/
 
+## Licença
 
-
+Maker Price 3D é software livre sob a GNU GPL v3 ou posterior (veja `LICENSE.txt`).
