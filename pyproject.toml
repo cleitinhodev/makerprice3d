@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "makerprice3d"
+version = "2.0.0"
+description = "Precificação profissional de impressões 3D em resina"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "CleitinhoDEV" }]
+dependencies = ["PySide6>=6.6", "requests>=2.31"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6"]
+
+[project.gui-scripts]
+makerprice3d = "makerprice3d.ui.app:main"
+
+[tool.setuptools.packages.find]
+include = ["makerprice3d*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"makerprice3d/services/exportacao.py" = ["E501"]
+"makerprice3d/ui/tema.py" = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["makerprice3d"]
+omit = ["makerprice3d/ui/*", "makerprice3d/__main__.py"]
